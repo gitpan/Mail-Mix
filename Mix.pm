@@ -7,7 +7,7 @@
 # redistribute it and/or modify it under the same terms as Perl
 # itself.
 #
-# $Id: Mix.pm,v 1.8 2000/10/09 13:27:29 cvs Exp $
+# $Id: Mix.pm,v 1.9 2000/10/13 15:14:51 cvs Exp $
 
 package Mail::Mix;
 
@@ -19,7 +19,7 @@ use Mail::Internet;
 use POSIX qw (tmpnam);
 use vars qw( $AUTOLOAD $VERSION );
 
-( $VERSION ) = '$Revision: 1.8 $' =~ /\s+([\d\.]+)/;
+( $VERSION ) = '$Revision: 1.9 $' =~ /\s+([\d\.]+)/;
 
 sub new {
   my ($class, %args) = @_;
@@ -28,7 +28,7 @@ sub new {
 	 'MIXCMD' => ($args {MIXDIR}) 
 	              || (`which mixmaster` =~ /^(.*)\n$/ && $1)
 	              || '/usr/bin/mixmaster',
-	 'DEBUG'  => 0,
+	 'DEBUG'  => 1,
 	}, $class;
 }
 
@@ -44,21 +44,43 @@ sub AUTOLOAD {
 }
 
 sub chain {
-  my $self = shift; my $mail = shift; my $path; my $x; my $tmpnam; my $tmpnam2;
-  my @r = $self->remailers(); my @ret; my $i;
+  my $self = shift; my $mail = shift; my $chainref = shift; my $rcpts = shift;
+  my ($path, $x, $tmpnam, $tmpnam2, $i, @ret); my @r = $self->remailers();
   my $chain = join ' ', map { if ($_) { $x = $_; ($x) = grep { $_->{Name} eq $x } @r; }
-			      $_?$x->{Index}:0 } @_;
+			      $_?$x->{Index}:0 } @$chainref;
   do { $tmpnam = tmpnam() } until sysopen(FH, $tmpnam, O_RDWR|O_CREAT|O_EXCL);
   do { $tmpnam2 = tmpnam() } until sysopen(FH2, $tmpnam2, O_RDWR|O_CREAT|O_EXCL); 
-  my $head = $mail->head(); my $headers = $head->as_string();
-  my $recipients = join ('', ($head->get('To'), $head->get('Cc'), $head->get('Bcc')));
-  my $body = join '', $mail->body(); $body .= "\n" unless $body =~ /\n/s;
-  my $expect = Expect->spawn ("$self->{MIXCMD} -O $tmpnam2 -l $chain > $tmpnam2");
+  my $head = $mail->head(); my $headers = $head->as_string(); my $recipients;
+  my $body = join '', @{$mail->body}; $body .= "\n" unless $body =~ /\n/s;
+  print FH "$headers\n$body"; close FH; close FH2;
+  if ($rcpts) {
+    $recipients = join ("\n", @$rcpts) . "\n";
+  }
+  else {
+    $recipients = join ('', ($head->get('To'), $head->get('Cc')));
+    if (my @bccs = $head->get('Bcc')) {
+      $mail->head->delete ('Bcc');
+      foreach (@bccs) {
+	my $expect = Expect->spawn ("$self->{MIXCMD} -O $tmpnam2 -l $chain");
+	$expect->log_stdout($self->{DEBUG}); 
+	$expect->expect (undef, 'destinations'); print $expect "$_\n"; 
+	$expect->expect (undef, 'headers'); print $expect "$headers\n";
+	$expect->expect (undef, 'file to chain'); print $expect "$tmpnam\n"; 
+	$expect->expect (undef); 
+	foreach (<$tmpnam2*>) { 
+	  open (FH, $_);
+	  $ret[$i++] = new Mail::Internet ([<FH>]); 
+	  close FH;
+	}
+      }
+    }
+  }
+  my $expect = Expect->spawn ("$self->{MIXCMD} -O $tmpnam2 -l $chain");
   $expect->log_stdout($self->{DEBUG}); 
   $expect->expect (undef, 'destinations'); print $expect "$recipients\n"; 
   $expect->expect (undef, 'headers'); print $expect "$headers\n";
-  $expect->expect (undef, 'file to chain'); print $expect "$tmpnam\n"; 
-  $expect->expect (undef); 
+  $expect->expect (undef, 'file to chain'); print $expect "$tmpnam\n";
+  $expect->expect (undef);
   foreach (<$tmpnam2*>) { 
     open (FH, $_);
     $ret[$i++] = new Mail::Internet ([<FH>]); 
@@ -98,7 +120,8 @@ Mail::Mix - An interface to mixmaster remailers.
 
 This module is a wrapper around Lance Cottrell's Mixmaster program,
 and facilitates sending mail through mixmaster style remailers from
-Perl.
+Perl. This module will NOT currently work with Anonymizer Inc's
+rewrite of mixmaster, and may never do so.
 
 =head1 CONSTRUCTOR
 
