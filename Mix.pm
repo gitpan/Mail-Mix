@@ -7,7 +7,7 @@
 # redistribute it and/or modify it under the same terms as Perl
 # itself.
 #
-# $Id: Mix.pm,v 1.6 2000/10/09 12:56:58 cvs Exp $
+# $Id: Mix.pm,v 1.7 2000/10/09 13:19:05 cvs Exp $
 
 package Mail::Mix;
 
@@ -19,7 +19,7 @@ use Mail::Internet;
 use POSIX qw (tmpnam);
 use vars qw( $AUTOLOAD $VERSION );
 
-( $VERSION ) = '$Revision: 1.6 $' =~ /\s+([\d\.]+)/;
+( $VERSION ) = '$Revision: 1.7 $' =~ /\s+([\d\.]+)/;
 
 sub new {
   my ($class, %args) = @_;
@@ -53,7 +53,6 @@ sub chain {
   my $head = $mail->head(); my $headers = $head->as_string();
   my $recipients = join ('', ($head->get('To'), $head->get('Cc'), $head->get('Bcc')));
   my $body = join '', $mail->body(); $body .= "\n" unless $body =~ /\n/s;
-  print "$self->{MIXCMD} -O $tmpnam2 -l $chain > $tmpnam2\n";
   my $expect = Expect->spawn ("$self->{MIXCMD} -O $tmpnam2 -l $chain > $tmpnam2");
   $expect->log_stdout($self->{DEBUG}); 
   $expect->expect (undef, 'destinations'); print $expect "$recipients\n"; 
