@@ -7,7 +7,7 @@
 # redistribute it and/or modify it under the same terms as Perl
 # itself.
 #
-# $Id: Mix.pm,v 1.9 2000/10/13 15:14:51 cvs Exp $
+# $Id: Mix.pm,v 1.10 2000/10/14 08:06:51 cvs Exp $
 
 package Mail::Mix;
 
@@ -19,7 +19,7 @@ use Mail::Internet;
 use POSIX qw (tmpnam);
 use vars qw( $AUTOLOAD $VERSION );
 
-( $VERSION ) = '$Revision: 1.9 $' =~ /\s+([\d\.]+)/;
+( $VERSION ) = '$Revision: 1.10 $' =~ /\s+([\d\.]+)/;
 
 sub new {
   my ($class, %args) = @_;
@@ -52,7 +52,7 @@ sub chain {
   do { $tmpnam2 = tmpnam() } until sysopen(FH2, $tmpnam2, O_RDWR|O_CREAT|O_EXCL); 
   my $head = $mail->head(); my $headers = $head->as_string(); my $recipients;
   my $body = join '', @{$mail->body}; $body .= "\n" unless $body =~ /\n/s;
-  print FH "$headers\n$body"; close FH; close FH2;
+  print FH "$body"; close FH; close FH2;
   if ($rcpts) {
     $recipients = join ("\n", @$rcpts) . "\n";
   }
