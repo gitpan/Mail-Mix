@@ -7,7 +7,7 @@
 # redistribute it and/or modify it under the same terms as Perl
 # itself.
 #
-# $Id: Mix.pm,v 1.7 2000/10/09 13:19:05 cvs Exp $
+# $Id: Mix.pm,v 1.8 2000/10/09 13:27:29 cvs Exp $
 
 package Mail::Mix;
 
@@ -19,7 +19,7 @@ use Mail::Internet;
 use POSIX qw (tmpnam);
 use vars qw( $AUTOLOAD $VERSION );
 
-( $VERSION ) = '$Revision: 1.7 $' =~ /\s+([\d\.]+)/;
+( $VERSION ) = '$Revision: 1.8 $' =~ /\s+([\d\.]+)/;
 
 sub new {
   my ($class, %args) = @_;
@@ -60,8 +60,8 @@ sub chain {
   $expect->expect (undef, 'file to chain'); print $expect "$tmpnam\n"; 
   $expect->expect (undef); 
   foreach (<$tmpnam2*>) { 
-    open (FH, $_); 
-    $ret[$i++] = new Mail::Internet (<FH>); 
+    open (FH, $_);
+    $ret[$i++] = new Mail::Internet ([<FH>]); 
     close FH; unlink $_; 
   }
   unlink $tmpnam;
